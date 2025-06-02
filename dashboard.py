@@ -1,3 +1,14 @@
+"""
+E-commerce Analytics Dashboard
+----------------------------
+A comprehensive analytics dashboard for visualizing e-commerce data.
+Built with Streamlit and Plotly for interactive data exploration.
+
+Author: Abhishek Gundala
+Version: 1.0.0
+License: MIT
+"""
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -5,14 +16,16 @@ import plotly.graph_objects as go
 from pathlib import Path
 import numpy as np
 
-# Set page config
+# Configuration and Setup
+# ----------------------
 st.set_page_config(
     page_title="E-commerce Analytics Dashboard",
     page_icon="📊",
     layout="wide"
 )
 
-# Add custom CSS with animation
+# Custom Styling
+# -------------
 st.markdown("""
     <style>
     .main {
@@ -39,7 +52,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Animated Header
+# Header Section
+# -------------
 st.markdown("""
     <div class="animated-header">
         <h1>📊 E-commerce Analytics Dashboard</h1>
@@ -47,21 +61,34 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# File uploader for CSV files
+# File Upload Section
+# -----------------
 uploaded_file = st.file_uploader("Upload your monthly sales data (CSV)", type="csv")
 
-# Function to load and process data
 @st.cache_data
 def load_data(file_path):
+    """
+    Load and preprocess the e-commerce data from CSV.
+    
+    Parameters:
+    -----------
+    file_path : str or Path
+        Path to the CSV file containing e-commerce data
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Processed DataFrame with converted timestamps
+    """
     df = pd.read_csv(file_path)
     df['event_time'] = pd.to_datetime(df['event_time'])
     return df
 
-# Load data
+# Data Loading
+# -----------
 if uploaded_file is not None:
     df = load_data(uploaded_file)
 else:
-    # Load default dataset if available
     default_file = Path("2019-Oct.csv")
     if default_file.exists():
         df = load_data(default_file)
@@ -69,7 +96,8 @@ else:
         st.error("Please upload a CSV file to begin analysis")
         st.stop()
 
-# Date filter
+# Sidebar Filters
+# --------------
 st.sidebar.header("Filters")
 min_date = df['event_time'].min().date()
 max_date = df['event_time'].max().date()
@@ -80,11 +108,13 @@ start_date, end_date = st.sidebar.date_input(
     max_value=max_date
 )
 
-# Filter data based on date range
+# Data Filtering
+# -------------
 mask = (df['event_time'].dt.date >= start_date) & (df['event_time'].dt.date <= end_date)
 filtered_df = df.loc[mask]
 
-# Key Metrics
+# Key Metrics Section
+# -----------------
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -96,7 +126,8 @@ with col3:
 with col4:
     st.metric("Median Price", f"${filtered_df['price'].median():.2f}")
 
-# Create two columns for the first row of charts
+# Price Distribution Analysis
+# -------------------------
 col1, col2 = st.columns(2)
 
 with col1:
@@ -111,6 +142,8 @@ with col1:
     fig_price_dist.update_layout(showlegend=False)
     st.plotly_chart(fig_price_dist, use_container_width=True)
 
+# Brand Analysis
+# -------------
 with col2:
     st.subheader("Top 10 Brands by Product Count")
     brand_counts = filtered_df['brand'].value_counts().head(10)
@@ -123,7 +156,8 @@ with col2:
     )
     st.plotly_chart(fig_brands, use_container_width=True)
 
-# Create two columns for the new brand analysis charts
+# Advanced Brand Analysis
+# ---------------------
 col1, col2 = st.columns(2)
 
 with col1:
@@ -158,7 +192,8 @@ with col2:
     fig_unique_products.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig_unique_products, use_container_width=True)
 
-# Event type distribution
+# Time Series Analysis
+# ------------------
 st.subheader("Event Type Distribution Over Time")
 events_over_time = filtered_df.groupby([filtered_df['event_time'].dt.date, 'event_type']).size().unstack()
 fig_events = px.line(
@@ -168,7 +203,8 @@ fig_events = px.line(
 )
 st.plotly_chart(fig_events, use_container_width=True)
 
-# Price ranges by category
+# Category Analysis
+# ---------------
 if 'category_code' in filtered_df.columns:
     st.subheader("Price Ranges by Category")
     category_price_stats = filtered_df.groupby('category_code').agg({
@@ -184,7 +220,8 @@ if 'category_code' in filtered_df.columns:
     )
     st.plotly_chart(fig_category, use_container_width=True)
 
-# Add data summary
+# Data Summary Section
+# ------------------
 st.subheader("Data Summary")
 with st.expander("View Data Summary"):
     st.write("Basic Statistics of Prices:")

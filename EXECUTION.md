@@ -165,3 +165,8 @@ The dashboard processes e-commerce data with the following key fields:
 4. Access the dashboard:
    - Local: http://localhost:4000
    - Network: http://[your-ip]:4000 
+
+# Install GitHub CLI
+brew install gh
+# Login and push
+gh auth login 
