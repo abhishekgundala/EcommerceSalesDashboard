@@ -20,34 +20,96 @@ import numpy as np
 # ----------------------
 st.set_page_config(
     page_title="E-commerce Analytics Dashboard",
-    page_icon="📊",
-    layout="wide"
+    page_icon="��",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # Custom Styling
 # -------------
 st.markdown("""
     <style>
+    /* Main page styling */
     .main {
         padding: 20px;
+        background-color: #f8f9fa;
     }
+    
+    /* Metric styling */
     .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    .animated-header {
-        animation: fadeIn 2s ease-in;
-        padding: 20px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        padding: 15px;
         border-radius: 10px;
-        background: linear-gradient(90deg, #1E88E5 0%, #1565C0 100%);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .stMetric:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Header animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Animated header */
+    .animated-header {
+        animation: fadeIn 1.5s ease-out;
+        padding: 30px;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
         color: white;
         text-align: center;
         margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Section styling */
+    .section-header {
+        background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        color: #1a1a1a;
+        font-weight: 600;
+    }
+    
+    /* Chart container */
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin: 10px 0;
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: #f8f9fa;
+        padding: 20px;
+    }
+    
+    /* File uploader styling */
+    .stFileUploader {
+        border: 2px dashed #6dd5ed;
+        border-radius: 10px;
+        padding: 10px;
+        margin: 10px 0;
+    }
+    
+    /* Custom text styles */
+    h1 {
+        font-family: 'Helvetica Neue', sans-serif;
+        font-weight: 700;
+    }
+    h2, h3 {
+        font-family: 'Helvetica Neue', sans-serif;
+        color: #2193b0;
+    }
+    p {
+        font-family: 'Helvetica Neue', sans-serif;
+        line-height: 1.6;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -57,12 +119,13 @@ st.markdown("""
 st.markdown("""
     <div class="animated-header">
         <h1>📊 E-commerce Analytics Dashboard</h1>
-        <p>Interactive Analysis of Sales Data</p>
+        <p style="font-size: 1.2em; margin-top: 10px;">Interactive Analysis of Sales Data</p>
     </div>
     """, unsafe_allow_html=True)
 
 # File Upload Section
 # -----------------
+st.markdown('<div class="section-header">Data Input</div>', unsafe_allow_html=True)
 uploaded_file = st.file_uploader("Upload your monthly sales data (CSV)", type="csv")
 
 @st.cache_data
@@ -98,7 +161,7 @@ else:
 
 # Sidebar Filters
 # --------------
-st.sidebar.header("Filters")
+st.sidebar.markdown('<div class="section-header">Analysis Controls</div>', unsafe_allow_html=True)
 min_date = df['event_time'].min().date()
 max_date = df['event_time'].max().date()
 start_date, end_date = st.sidebar.date_input(
@@ -115,7 +178,16 @@ filtered_df = df.loc[mask]
 
 # Key Metrics Section
 # -----------------
+st.markdown('<div class="section-header">Key Performance Metrics</div>', unsafe_allow_html=True)
 col1, col2, col3, col4 = st.columns(4)
+
+metric_style = """
+    <style>
+    .metric-value { font-size: 24px; font-weight: bold; color: #2193b0; }
+    .metric-label { font-size: 14px; color: #666; }
+    </style>
+"""
+st.markdown(metric_style, unsafe_allow_html=True)
 
 with col1:
     st.metric("Total Products", len(filtered_df['product_id'].unique()))
@@ -126,42 +198,70 @@ with col3:
 with col4:
     st.metric("Median Price", f"${filtered_df['price'].median():.2f}")
 
+# Chart Theme Configuration
+chart_theme = {
+    'bgcolor': 'white',
+    'font_family': 'Helvetica Neue',
+    'title_font_size': 20,
+    'title_font_color': '#2193b0',
+    'showgrid': True,
+    'gridcolor': '#f0f0f0'
+}
+
 # Price Distribution Analysis
 # -------------------------
+st.markdown('<div class="section-header">Price Analysis</div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Price Distribution")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     fig_price_dist = px.histogram(
         filtered_df,
         x="price",
         nbins=50,
         title="Product Price Distribution",
-        labels={"price": "Price ($)", "count": "Number of Products"}
+        labels={"price": "Price ($)", "count": "Number of Products"},
+        color_discrete_sequence=['#2193b0']
     )
-    fig_price_dist.update_layout(showlegend=False)
+    fig_price_dist.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family=chart_theme['font_family'],
+        title_font_size=chart_theme['title_font_size'],
+        title_font_color=chart_theme['title_font_color']
+    )
     st.plotly_chart(fig_price_dist, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# Brand Analysis
-# -------------
 with col2:
-    st.subheader("Top 10 Brands by Product Count")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     brand_counts = filtered_df['brand'].value_counts().head(10)
     fig_brands = px.bar(
         x=brand_counts.values,
         y=brand_counts.index,
         orientation='h',
         title="Top 10 Brands",
-        labels={"x": "Number of Products", "y": "Brand"}
+        labels={"x": "Number of Products", "y": "Brand"},
+        color=brand_counts.values,
+        color_continuous_scale='Viridis'
+    )
+    fig_brands.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family=chart_theme['font_family'],
+        title_font_size=chart_theme['title_font_size'],
+        title_font_color=chart_theme['title_font_color']
     )
     st.plotly_chart(fig_brands, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Advanced Brand Analysis
 # ---------------------
+st.markdown('<div class="section-header">Brand Performance Analysis</div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Top Brands by Total Sales Value")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     brand_sales = filtered_df.groupby('brand').agg({
         'price': lambda x: (x * filtered_df.loc[x.index, 'event_type'].eq('purchase')).sum()
     }).sort_values('price', ascending=False).head(10)
@@ -175,11 +275,19 @@ with col1:
         color='price',
         color_continuous_scale='Viridis'
     )
-    fig_brand_sales.update_layout(xaxis_tickangle=-45)
+    fig_brand_sales.update_layout(
+        xaxis_tickangle=-45,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family=chart_theme['font_family'],
+        title_font_size=chart_theme['title_font_size'],
+        title_font_color=chart_theme['title_font_color']
+    )
     st.plotly_chart(fig_brand_sales, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    st.subheader("Brands by Unique Products Sold")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     unique_products = filtered_df[filtered_df['event_type'] == 'purchase'].groupby('brand')['product_id'].nunique().sort_values(ascending=False).head(10)
     
     fig_unique_products = px.bar(
@@ -189,44 +297,72 @@ with col2:
         color='value',
         color_continuous_scale='Viridis'
     )
-    fig_unique_products.update_layout(xaxis_tickangle=-45)
+    fig_unique_products.update_layout(
+        xaxis_tickangle=-45,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family=chart_theme['font_family'],
+        title_font_size=chart_theme['title_font_size'],
+        title_font_color=chart_theme['title_font_color']
+    )
     st.plotly_chart(fig_unique_products, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Time Series Analysis
 # ------------------
-st.subheader("Event Type Distribution Over Time")
+st.markdown('<div class="section-header">Temporal Analysis</div>', unsafe_allow_html=True)
+st.markdown('<div class="chart-container">', unsafe_allow_html=True)
 events_over_time = filtered_df.groupby([filtered_df['event_time'].dt.date, 'event_type']).size().unstack()
 fig_events = px.line(
     events_over_time,
     title="Event Types Over Time",
-    labels={"value": "Number of Events", "index": "Date"}
+    labels={"value": "Number of Events", "index": "Date"},
+    color_discrete_sequence=px.colors.qualitative.Set3
+)
+fig_events.update_layout(
+    plot_bgcolor='white',
+    paper_bgcolor='white',
+    font_family=chart_theme['font_family'],
+    title_font_size=chart_theme['title_font_size'],
+    title_font_color=chart_theme['title_font_color']
 )
 st.plotly_chart(fig_events, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Category Analysis
 # ---------------
 if 'category_code' in filtered_df.columns:
-    st.subheader("Price Ranges by Category")
-    category_price_stats = filtered_df.groupby('category_code').agg({
-        'price': ['mean', 'min', 'max']
-    }).reset_index()
-    category_price_stats.columns = ['category', 'mean_price', 'min_price', 'max_price']
+    st.markdown('<div class="section-header">Category Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     fig_category = px.box(
         filtered_df,
         x='category_code',
         y='price',
         title="Price Distribution by Category",
-        labels={"category_code": "Category", "price": "Price ($)"}
+        labels={"category_code": "Category", "price": "Price ($)"},
+        color='category_code',
+        color_discrete_sequence=px.colors.qualitative.Set3
+    )
+    fig_category.update_layout(
+        xaxis_tickangle=-45,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family=chart_theme['font_family'],
+        title_font_size=chart_theme['title_font_size'],
+        title_font_color=chart_theme['title_font_color']
     )
     st.plotly_chart(fig_category, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Data Summary Section
 # ------------------
-st.subheader("Data Summary")
+st.markdown('<div class="section-header">Detailed Analysis</div>', unsafe_allow_html=True)
 with st.expander("View Data Summary"):
-    st.write("Basic Statistics of Prices:")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+    st.write("### Basic Statistics of Prices")
     st.write(filtered_df['price'].describe())
     
     if st.checkbox("Show Raw Data Sample"):
-        st.write("Sample of Raw Data:")
-        st.write(filtered_df.head()) 
+        st.write("### Sample of Raw Data")
+        st.write(filtered_df.head())
+    st.markdown('</div>', unsafe_allow_html=True) 
