@@ -159,9 +159,29 @@ else:
         st.error("Please upload a CSV file to begin analysis")
         st.stop()
 
-# Sidebar Filters
-# --------------
-st.sidebar.markdown('<div class="section-header">Analysis Controls</div>', unsafe_allow_html=True)
+# Navigation and Sheet Selection
+# -----------------------------
+st.sidebar.markdown('<div class="section-header">Dashboard Navigation</div>', unsafe_allow_html=True)
+
+# Multi-sheet navigation (Tableau-style)
+sheet_options = {
+    "📊 Overview Dashboard": "overview",
+    "💰 Sales Analysis": "sales", 
+    "📈 Product Performance": "products",
+    "👥 Customer Insights": "customers",
+    "🕒 Time Series Analysis": "timeseries",
+    "📋 Data Explorer": "data"
+}
+
+selected_sheet = st.sidebar.selectbox(
+    "Select Analysis Sheet:",
+    list(sheet_options.keys()),
+    index=0
+)
+current_sheet = sheet_options[selected_sheet]
+
+# Global Filters (Available across all sheets)
+st.sidebar.markdown('<div class="section-header">Global Filters</div>', unsafe_allow_html=True)
 min_date = df['event_time'].min().date()
 max_date = df['event_time'].max().date()
 start_date, end_date = st.sidebar.date_input(
@@ -171,32 +191,139 @@ start_date, end_date = st.sidebar.date_input(
     max_value=max_date
 )
 
+# Additional filters
+if 'brand' in df.columns:
+    brands = ['All'] + sorted(df['brand'].dropna().unique().tolist())
+    selected_brands = st.sidebar.multiselect(
+        "Filter by Brand:",
+        brands,
+        default=['All']
+    )
+
+if 'category_code' in df.columns:
+    categories = ['All'] + sorted(df['category_code'].dropna().unique().tolist())
+    selected_categories = st.sidebar.multiselect(
+        "Filter by Category:",
+        categories,
+        default=['All']
+    )
+
+# Event type filter
+event_types = ['All'] + sorted(df['event_type'].unique().tolist())
+selected_events = st.sidebar.multiselect(
+    "Filter by Event Type:",
+    event_types,
+    default=['All']
+)
+
 # Data Filtering
 # -------------
+# Apply date filter
 mask = (df['event_time'].dt.date >= start_date) & (df['event_time'].dt.date <= end_date)
 filtered_df = df.loc[mask]
 
-# Key Metrics Section
-# -----------------
-st.markdown('<div class="section-header">Key Performance Metrics</div>', unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns(4)
+# Apply brand filter
+if 'brand' in df.columns and 'All' not in selected_brands:
+    filtered_df = filtered_df[filtered_df['brand'].isin(selected_brands)]
 
-metric_style = """
-    <style>
-    .metric-value { font-size: 24px; font-weight: bold; color: #2193b0; }
-    .metric-label { font-size: 14px; color: #666; }
-    </style>
-"""
-st.markdown(metric_style, unsafe_allow_html=True)
+# Apply category filter  
+if 'category_code' in df.columns and 'All' not in selected_categories:
+    filtered_df = filtered_df[filtered_df['category_code'].isin(selected_categories)]
 
-with col1:
-    st.metric("Total Products", len(filtered_df['product_id'].unique()))
-with col2:
-    st.metric("Highest Price", f"${filtered_df['price'].max():.2f}")
-with col3:
-    st.metric("Lowest Price", f"${filtered_df['price'].min():.2f}")
-with col4:
-    st.metric("Median Price", f"${filtered_df['price'].median():.2f}")
+# Apply event type filter
+if 'All' not in selected_events:
+    filtered_df = filtered_df[filtered_df['event_type'].isin(selected_events)]
+
+# Display current filter summary
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Current Filters:**")
+st.sidebar.write(f"📅 Date Range: {start_date} to {end_date}")
+st.sidebar.write(f"📊 Total Records: {len(filtered_df):,}")
+if len(filtered_df) > 0:
+    st.sidebar.write(f"💰 Price Range: ${filtered_df['price'].min():.2f} - ${filtered_df['price'].max():.2f}")
+
+def create_enhanced_filters():
+    """Create additional dynamic filters based on current data"""
+    st.sidebar.markdown("### Advanced Filters")
+    
+    # Price range filter
+    if len(filtered_df) > 0:
+        price_min, price_max = st.sidebar.slider(
+            "Price Range ($)",
+            min_value=float(filtered_df['price'].min()),
+            max_value=float(filtered_df['price'].max()),
+            value=(float(filtered_df['price'].min()), float(filtered_df['price'].max())),
+            step=0.01
+        )
+        return price_min, price_max
+    return None, None
+
+price_min, price_max = create_enhanced_filters()
+if price_min is not None and price_max is not None:
+    filtered_df = filtered_df[
+        (filtered_df['price'] >= price_min) & 
+        (filtered_df['price'] <= price_max)
+    ]
+
+# Sheet Navigation System
+# ----------------------
+def show_overview_dashboard():
+    """Overview Dashboard - Main KPIs and summary charts"""
+    st.markdown('<div class="section-header">Key Performance Metrics</div>', unsafe_allow_html=True)
+    
+    # Check if we have data
+    if len(filtered_df) == 0:
+        st.warning("No data available for the selected filters. Please adjust your filter criteria.")
+        return
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Products", f"{len(filtered_df['product_id'].unique()):,}")
+    with col2:
+        st.metric("Highest Price", f"${filtered_df['price'].max():.2f}")
+    with col3:
+        st.metric("Lowest Price", f"${filtered_df['price'].min():.2f}")
+    with col4:
+        st.metric("Median Price", f"${filtered_df['price'].median():.2f}")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Events overview
+        event_counts = filtered_df['event_type'].value_counts()
+        fig_events = px.pie(
+            values=event_counts.values,
+            names=event_counts.index,
+            title="Event Distribution",
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
+        fig_events.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_family='Helvetica Neue'
+        )
+        st.plotly_chart(fig_events, use_container_width=True)
+    
+    with col2:
+        # Top categories by count
+        if 'category_code' in filtered_df.columns:
+            top_categories = filtered_df['category_code'].value_counts().head(10)
+            fig_categories = px.bar(
+                x=top_categories.values,
+                y=top_categories.index,
+                orientation='h',
+                title="Top 10 Categories by Volume",
+                labels={"x": "Count", "y": "Category"},
+                color=top_categories.values,
+                color_continuous_scale='Viridis'
+            )
+            fig_categories.update_layout(
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font_family='Helvetica Neue'
+            )
+            st.plotly_chart(fig_categories, use_container_width=True)
 
 # Chart Theme Configuration
 chart_theme = {
